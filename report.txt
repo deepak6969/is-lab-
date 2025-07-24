@@ -1,0 +1,149 @@
+1.OWASP
+	The Open Web Application security project, or OWASP , offers a wide array of free, open-source tools and resources for web application security testing and development. These tools are designed to help developers and security professionals identify and mitigate vulnerabilities in their applications. Some popular tools include OWASP ZAP, a web application security scanner, and OWASP Dependency-Check, which helps identify vulnerable dependencies. 
+
+ Advantages 
+	.include open-source nature 
+	.comprehensive resources
+	.focus on community-driven best practices 
+Disadvantage 
+	.potential for false positive 
+	.manual testing required 
+	.limited customization 
+
+
+2.METASPLOIT 
+	The Metasploit project is a computer security project that provides data about security vulnerabilities and assist penetration testing.
+
+Advantages
+	.extensive exploit database 
+	.modular framework 
+	.customization and extensibility 
+	.IDS signature development 
+Disadvantage
+	.Risk of System Instability
+	.Potential for Misuse
+	.Risk of System Instability
+	.Steep Learning Curve
+
+
+3.BURP  SUITE 
+	Burp Suite is a comprehensive suite of tools used for web application security testing. It acts as an middleman between a user's browser and the web application, allowing users to intercept, inspect, and modify requests and responses, and to scan for vulnerabilities. It's widely used for penetration testing and vulnerability assessment of web applications
+
+Advantages
+	.Comprehensive Toolset
+	.Industry Standard
+	.Customization and Extensibility
+	.Detailed Analysis
+Disadvantage
+	.Steep Learning Curve
+	.Limited Support
+	.Resource Intensive
+
+
+4.N,MAP 
+	Nmap is a powerful, versatile network scanning tool used for network discovery and security auditing. It helps identify active devices, open ports, services, and vulnerabilities on a network. Essentially, it's used to "map" networks, providing a detailed overview for administrators and security professionals
+
+Advantage
+	.Vulnerability Assessment
+	.Penetration Testing
+	.Security Audits
+Disadvantage 
+	.Customization Limitations
+	.Potential for Detection and Blocking
+	.Complexity 
+
+
+5.SQL MAP
+	SQLMAP is an open-source penetration tool. SQLMAP allows you to automate the process of identifying and then exploiting SQL injection flaws and subsequently taking control of the database servers. In addition, SQLMAP comes with a detection engine that includes advanced features to support penetration testing
+
+
+6.SQL NINJA 
+	sqlininja exploits web applications that use Microsoft SQL Server as a database backend. Its focus is on getting a running shell on the remote host. sqlninja doesn't find an SQL injection in the first place, but automates the exploitation process once one has been discovered.
+
+
+7.MSF VENOM 
+	MSFvenom is a combination of Msfplayload and MSF encode putting both of these tools into a single framework instance
+
+Advantage
+	.one single tool
+	.standardized command line options 
+	.increased speed 
+
+
+8.HYDRA TOOL
+	Hydra is a parallelized login cracker which supports numerous protocols to attack. It is very fast and flexible, and new modules are easy to add.
+
+This tool makes it possible for researchers and security consultants to show how easy it would be to gain unauthorized access to a system remotely
+
+9.NET CAT
+	Netcat reads data from standard input (stdin) and writes it to a network connection (either TCP or UDP). Conversely, it can also read data from a network connection and write it to standard output (stdout). This bidirectional data flow makes it a powerful tool for various networking tasks. 
+
+Key features 
+	.TCP/UDP Connections
+	.File Transfer
+	.Remote Shell
+	.Port Scanning
+
+
+10.KALI LINUX 
+	Kali Linux is a Debian-based Linux distribution designed for penetration testing, security auditing, and digital forensics. It's known for its extensive collection of pre-installed security tools, making it a popular choice for cybersecurity professionals and enthusiasts. 
+
+Key features 
+	.Extensive Toolset
+	.Open Source
+	.Customizable 
+	.Multi platform support
+ 
+kali Linux are used by Penetration Testers ,Security Researchers,Digital Forensics Investigators,Cybersecurity Professionals.
+
+
+11.OWASPzap
+	It's used to find vulnerabilities in web applications by acting as a proxy, intercepting and analysing web traffic between a browser and a target application. ZAP can be used for both automated and manual testing, making it a versatile tool for security professionals and developers alike.
+
+Functionality 
+	.Dynamic Application Security Testing 
+	.Extensible and Customizable
+	.Active and Passive Scanning
+	.Proxy Server 
+	.Active and Passive Scanning
+	.Vulnerability Detection
+	
+
+12.ETTER-CAP
+	Ettercap is an open _source tool that can be used to support middle man attacks on networks.
+Ettercap can capture packets and then write them back onto the, network . Ettercap enables the diversion and alteration of data virtually in real-time. Ettercap can also be used for the protocol analysis necessary to analyze network traffic. 
+	While Ettercap can support network traffic analysis, the most frequent use of Ettercap is to set up man-in-the-middle attacks using ARP poisoning. Penetration testing you can emulate includes man-in-the-middle attacks, credentials capture, dns spoofing, and DoS attack.
+	Ettercap also supports both active and passive deep analysis of many protocols and includes many features for network and host analysis. Many “sniffing” modes are available – this includes MAC based, IP based, ARP based (full duplex), and PublicARP based (half duplex). Ettercap can also detect a switched local area network (LAN) and use the OS fingerprints to determine the total geometry of the LAN. 
+
+Ettercap is a necessary part of the tool inventory for any penetration tester or ethical hacker.
+
+
+13.MOSQUITTO 
+	Mosquitto is an open-source message broker that implements the MQTT protocol, known for its lightweight nature and suitability for resource-constrained devices. It is a popular choice for Internet of Things (IoT) applications, enabling communication between devices using a publish/subscribe model. 
+
+Key Features:
+	.Supports MQTT versions 5.0, 3.1.1, and 3.1. 
+	.Cross-platform 
+	.Client libraries
+	.Security: Supports TLS encryption and client authentication
+	.Scalability: Can be used in small-scale deployments or enterprise-level setups. 
+	.Utilities: Provides mosquitto_pub and mosquitto_sub for publishing and subscribing to 
+		    topics 
+
+
+14.MICROSOFT THREAT MODELING TOOL
+	 It's a core component of the Microsoft Security Development Lifecycle (SDL). The tool allows users to visualize system components, data flows, and security boundaries, and then analyze those designs for potential security issues. 
+
+Key Features and Benefits:
+	.visual representation 
+	.Guided Threat Identification
+	.Non-Expert Friendly
+	.Early Threat Mitigation
+	.Integration with Microsoft Ecosystem
+
+How it works 
+	create model , identify threats ,analyze threats ,implement mitigations 
+
+
+15.PIE CHART 
+	a circular statistical graphic, divided into slices to illustrate numerical proportion
