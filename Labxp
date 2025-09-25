@@ -1,0 +1,429 @@
+"""
+egov_system.py
+Educational implementation of:
+- ElGamal encryption/decryption (toy parameters)
+- RSA key generation and signatures (toy sizes)
+- SHA-256 hashing
+Menu-driven roles: Citizen, Government Officer, Auditor
+
+NOT SECURE FOR PRODUCTION. Use real crypto libraries (PyCryptodome/cryptography).
+"""
+
+import os, json, time, hashlib, random
+from datetime import datetime
+
+DATA_DIR = "data"
+os.makedirs(DATA_DIR, exist_ok=True)
+
+# ---------------------------
+# Utility functions
+# ---------------------------
+
+def now_ts():
+    return datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+
+def save_json(path, obj):
+    with open(path, "w") as f:
+        json.dump(obj, f, indent=2)
+
+def load_json(path):
+    with open(path, "r") as f:
+        return json.load(f)
+
+# ---------------------------
+# Simple RSA (educational)
+# ---------------------------
+# We'll implement small-key RSA for classroom demonstration.
+# Replace with robust library in real use.
+
+def is_prime(n):
+    if n < 2:
+        return False
+    small_primes = [2,3,5,7,11,13,17,19,23,29]
+    for p in small_primes:
+        if n == p:
+            return True
+        if n % p == 0:
+            return False
+    # Miller-Rabin
+    d = n-1
+    s = 0
+    while d % 2 == 0:
+        s += 1
+        d //= 2
+    def trial(a):
+        x = pow(a, d, n)
+        if x == 1 or x == n-1:
+            return True
+        for _ in range(s-1):
+            x = pow(x, 2, n)
+            if x == n-1:
+                return True
+        return False
+    for a in [2,3,5,7,11]:
+        if a >= n: break
+        if not trial(a):
+            return False
+    return True
+
+def gen_prime_candidate(bits=16):
+    while True:
+        val = random.getrandbits(bits) | 1
+        if is_prime(val):
+            return val
+
+def egcd(a,b):
+    if b==0: return (1,0,a)
+    x,y,g = egcd(b, a%b)
+    return (y, x - (a//b)*y, g)
+
+def modinv(a,m):
+    x,y,g = egcd(a,m)
+    if g != 1:
+        raise Exception("no inverse")
+    return x % m
+
+def generate_rsa_keys(bits=32):
+    # Educational: small primes
+    p = gen_prime_candidate(bits//2)
+    q = gen_prime_candidate(bits//2)
+    while q == p:
+        q = gen_prime_candidate(bits//2)
+    n = p * q
+    phi = (p-1)*(q-1)
+    # common e
+    e = 65537
+    if phi <= e or egcd(e, phi)[2] != 1:
+        # pick small e
+        e = 17
+        while egcd(e, phi)[2] != 1:
+            e += 2
+    d = modinv(e, phi)
+    return {"n": n, "e": e, "d": d, "p": p, "q": q}
+
+def rsa_sign(message_bytes, priv):
+    # sign integer of hash
+    m_int = int.from_bytes(message_bytes, "big")
+    s = pow(m_int, priv["d"], priv["n"])
+    return s
+
+def rsa_verify(message_bytes, sig_int, pub):
+    m_int = int.from_bytes(message_bytes, "big")
+    got = pow(sig_int, pub["e"], pub["n"])
+    return got == m_int
+
+# ---------------------------
+# Simple ElGamal (educational)
+# ---------------------------
+# Use small prime p and generator g. In real world use big primes or ECC.
+
+def find_primitive_root(p):
+    # naive method
+    if p == 2: return 1
+    phi = p-1
+    factors = []
+    n = phi
+    d = 2
+    while d*d <= n:
+        if n % d == 0:
+            factors.append(d)
+            while n % d == 0:
+                n//=d
+        d+=1
+    if n>1: factors.append(n)
+    for g in range(2, p):
+        ok = True
+        for q in factors:
+            if pow(g, phi//q, p) == 1:
+                ok = False
+                break
+        if ok:
+            return g
+    return None
+
+def generate_elgamal_keys(bits=16):
+    # generate small prime p
+    while True:
+        p = gen_prime_candidate(bits)
+        if p > 3:
+            break
+    g = find_primitive_root(p)
+    x = random.randint(2, p-2)  # private
+    y = pow(g, x, p)            # public component
+    return {"p": p, "g": g, "x": x, "y": y}
+
+def elgamal_encrypt(m_int, pub, k=None):
+    p = pub["p"]; g = pub["g"]; y = pub["y"]
+    if k is None:
+        k = random.randint(2, p-2)
+    c1 = pow(g, k, p)
+    s = pow(y, k, p)
+    c2 = (m_int * s) % p
+    return (c1, c2)
+
+def elgamal_decrypt(c1, c2, priv):
+    p = priv["p"]; x = priv["x"]
+    s = pow(c1, x, p)
+    s_inv = modinv(s, p)
+    m = (c2 * s_inv) % p
+    return m
+
+# ---------------------------
+# File / storage helpers
+# ---------------------------
+
+METADATA_FILE = os.path.join(DATA_DIR, "metadata.json")
+def load_metadata():
+    if not os.path.exists(METADATA_FILE):
+        return []
+    return load_json(METADATA_FILE)
+
+def save_metadata(meta_list):
+    save_json(METADATA_FILE, meta_list)
+
+def append_metadata(item):
+    meta = load_metadata()
+    meta.append(item)
+    save_metadata(meta)
+
+# ---------------------------
+# System keys (server)
+# ---------------------------
+
+SERVER_KEYS_FILE = os.path.join(DATA_DIR, "server_keys.json")
+if os.path.exists(SERVER_KEYS_FILE):
+    server_keys = load_json(SERVER_KEYS_FILE)
+else:
+    # generate new small elgamal keypair for server
+    ek = generate_elgamal_keys(bits=16)
+    # save
+    server_keys = ek
+    save_json(SERVER_KEYS_FILE, server_keys)
+print("Server ElGamal public (p,g,y) saved in data/server_keys.json")
+
+# ---------------------------
+# Example Citizen keys store
+# ---------------------------
+# In real system each citizen would have their RSA keypair. For the lab we maintain one demo citizen.
+
+CITIZEN_KEY_FILE = os.path.join(DATA_DIR, "citizen_rsa.json")
+if os.path.exists(CITIZEN_KEY_FILE):
+    citizen_rsa = load_json(CITIZEN_KEY_FILE)
+else:
+    citizen_rsa = generate_rsa_keys(bits=32)
+    save_json(CITIZEN_KEY_FILE, citizen_rsa)
+print("Citizen RSA keypair saved in data/citizen_rsa.json")
+
+# ---------------------------
+# Core operations
+# ---------------------------
+
+def compute_sha256_bytes(data_bytes):
+    return hashlib.sha256(data_bytes).digest()
+
+def citizen_upload(file_path, citizen_id="citizen1"):
+    if not os.path.exists(file_path):
+        print("File not found:", file_path); return
+    with open(file_path, "rb") as f:
+        data = f.read()
+    # 1) encrypt with server elgamal public key
+    m_int = int.from_bytes(data, "big")
+    p = server_keys["p"]
+    if m_int >= p:
+        # for toy elgamal, message must be < p. We'll chunk simply by hashing + storing plaintext separately encrypted via hybrid approach.
+        print("File too large for toy ElGamal; performing hybrid approach (encrypt hash only).")
+        # For the lab demonstration: we will encrypt the SHA256 digest instead and store plaintext encrypted with a simple XOR key (NOT SECURE)
+        hash_bytes = compute_sha256_bytes(data)
+        m_int = int.from_bytes(hash_bytes, "big")
+        c1,c2 = elgamal_encrypt(m_int, server_keys)
+        # store the plaintext as-is (in practice you'd use AES with symmetric key)
+        plain_store_path = os.path.join(DATA_DIR, f"plain_{int(time.time())}.txt")
+        with open(plain_store_path, "wb") as pf:
+            pf.write(data)
+    else:
+        c1,c2 = elgamal_encrypt(m_int, server_keys)
+        plain_store_path = None
+
+    # 2) compute SHA-256 of plaintext
+    hash_bytes = compute_sha256_bytes(data)
+
+    # 3) sign hash with citizen RSA private key
+    sig_int = rsa_sign(hash_bytes, citizen_rsa)
+
+    record_id = int(time.time()*1000)
+    cipher_path = os.path.join(DATA_DIR, f"cipher_{record_id}.json")
+    save_json(cipher_path, {"c1": c1, "c2": c2, "plain_store": plain_store_path})
+
+    sig_path = os.path.join(DATA_DIR, f"sig_{record_id}.json")
+    save_json(sig_path, {"sig": str(sig_int)})
+
+    metadata = {
+        "id": record_id,
+        "uploader": citizen_id,
+        "original_filename": os.path.basename(file_path),
+        "cipherfile": cipher_path,
+        "sigfile": sig_path,
+        "timestamp": now_ts(),
+        "sha256_hex": compute_sha256_bytes(data).hex(),
+        "verified": None
+    }
+    append_metadata(metadata)
+    print("Upload complete. Record id:", record_id)
+
+def officer_decrypt_and_verify(record_id):
+    meta = load_metadata()
+    rec = next((r for r in meta if r["id"] == record_id), None)
+    if not rec:
+        print("Record not found.")
+        return
+    cipher = load_json(rec["cipherfile"])
+    c1 = cipher["c1"]; c2 = cipher["c2"]
+    # decrypt using server private elgamal keys
+    priv = server_keys
+    m_int = elgamal_decrypt(c1, c2, priv)
+    # try to reconstruct bytes
+    try:
+        # small-int -> bytes
+        m_bytes = m_int.to_bytes((m_int.bit_length()+7)//8, "big")
+    except Exception as e:
+        m_bytes = b""
+    # If metadata contains plain_store path, that file is full plaintext
+    if cipher.get("plain_store"):
+        with open(cipher["plain_store"], "rb") as pf:
+            plaintext = pf.read()
+    else:
+        plaintext = m_bytes
+
+    # compute sha256 and compare
+    sha_bytes = compute_sha256_bytes(plaintext)
+    sha_hex = sha_bytes.hex()
+    matches = (sha_hex == rec["sha256_hex"])
+
+    # load signature and verify using citizen's public key
+    sig_obj = load_json(rec["sigfile"])
+    sig_int = int(sig_obj["sig"])
+    pub = {"n": citizen_rsa["n"], "e": citizen_rsa["e"]}
+    sig_ok = rsa_verify(sha_bytes, sig_int, pub)
+
+    # store result
+    rec["verified"] = {"timestamp": now_ts(), "sha_match": matches, "sig_ok": sig_ok}
+    meta = [r if r["id"] != record_id else rec for r in meta]
+    save_metadata(meta)
+
+    print("Decryption & Verification results:")
+    print("SHA matches stored hash:", matches)
+    print("Signature valid:", sig_ok)
+    print("Plaintext (first 500 bytes):")
+    print(plaintext[:500].decode(errors="replace"))
+
+def auditor_view_and_verify(record_id):
+    meta = load_metadata()
+    rec = next((r for r in meta if r["id"] == record_id), None)
+    if not rec:
+        print("Record not found.")
+        return
+    print("Cipher file path:", rec["cipherfile"])
+    cipher = load_json(rec["cipherfile"])
+    print("Cipher contents (c1,c2):", cipher["c1"], cipher["c2"])
+    # Auditor cannot decrypt (no private), but can verify signature:
+    sig_obj = load_json(rec["sigfile"])
+    sig_int = int(sig_obj["sig"])
+    # Auditor must have citizen's public rsa to verify:
+    pub = {"n": citizen_rsa["n"], "e": citizen_rsa["e"]}
+    # auditor only can verify if they know the plaintext hash (here we read it from metadata)
+    expected_hash_hex = rec["sha256_hex"]
+    expected_hash_bytes = bytes.fromhex(expected_hash_hex)
+    sig_ok = rsa_verify(expected_hash_bytes, sig_int, pub)
+    print("Signature verification result (using stored hash):", sig_ok)
+
+# ---------------------------
+# Simple CLI
+# ---------------------------
+def list_records():
+    meta = load_metadata()
+    if not meta:
+        print("No records yet.")
+        return
+    for m in meta:
+        print(f"ID: {m['id']} | uploader: {m['uploader']} | file: {m['original_filename']} | ts: {m['timestamp']} | verified: {m.get('verified')}")
+
+def citizen_menu():
+    while True:
+        print("\nCitizen Menu:")
+        print("1) Upload a file")
+        print("2) View my previous uploads")
+        print("0) Back")
+        ch = input("Choice: ").strip()
+        if ch == "1":
+            p = input("Path to text file: ").strip()
+            citizen_upload(p, citizen_id="citizen1")
+        elif ch == "2":
+            meta = load_metadata()
+            mine = [m for m in meta if m["uploader"] == "citizen1"]
+            if not mine:
+                print("No uploads.")
+            else:
+                for m in mine:
+                    print(f"ID {m['id']} | file {m['original_filename']} | ts {m['timestamp']} | verified {m['verified']}")
+        elif ch == "0":
+            break
+        else:
+            print("Invalid option.")
+
+def officer_menu():
+    while True:
+        print("\nOfficer Menu:")
+        print("1) List records")
+        print("2) Decrypt & verify a record")
+        print("0) Back")
+        ch = input("Choice: ").strip()
+        if ch == "1":
+            list_records()
+        elif ch == "2":
+            rid = int(input("Enter record ID: ").strip())
+            officer_decrypt_and_verify(rid)
+        elif ch == "0":
+            break
+        else:
+            print("Invalid option.")
+
+def auditor_menu():
+    while True:
+        print("\nAuditor Menu:")
+        print("1) List records")
+        print("2) View cipher and verify signature")
+        print("0) Back")
+        ch = input("Choice: ").strip()
+        if ch == "1":
+            list_records()
+        elif ch == "2":
+            rid = int(input("Enter record ID: ").strip())
+            auditor_view_and_verify(rid)
+        elif ch == "0":
+            break
+        else:
+            print("Invalid option.")
+
+def main_menu():
+    print("E-Governance Data Management System (Lab Demo)")
+    while True:
+        print("\nMain Menu:")
+        print("1) Citizen")
+        print("2) Government Officer")
+        print("3) Auditor")
+        print("0) Exit")
+        ch = input("Choose role: ").strip()
+        if ch == "1":
+            citizen_menu()
+        elif ch == "2":
+            officer_menu()
+        elif ch == "3":
+            auditor_menu()
+        elif ch == "0":
+            print("Goodbye.")
+            break
+        else:
+            print("Invalid option.")
+
+if __name__ == "__main__":
+    main_menu()
